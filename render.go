@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"regexp"
 	"strings"
 	"text/template"
@@ -37,12 +39,25 @@ func render(w http.ResponseWriter, r *http.Request) {
 	hostname := r.Header.Get("X-Forwarded-Host")
 	style := getPreviewStyle(r)
 
+	// proxy requests that aren't from bots directly to coracle
+	if style == "" || style == "unknown" {
+		coracle, _ := url.Parse("https://coracle.social")
+		proxy := httputil.ReverseProxy{
+			Director: func(r *http.Request) {
+				r.URL = coracle
+				r.Host = coracle.Host
+				r.URL.RawPath = "/" + code
+			},
+		}
+		proxy.ServeHTTP(w, r)
+		return
+	}
+
 	event, err := getEvent(r.Context(), code)
 	if err != nil {
 		http.Error(w, "error fetching event: "+err.Error(), 404)
 		return
 	}
-
 	typ := "profile"
 
 	npub, _ := nip19.EncodePublicKey(event.PubKey)
