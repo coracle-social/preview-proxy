@@ -30,6 +30,8 @@ func render(w http.ResponseWriter, r *http.Request) {
 		code, _ = nip19.EncodeNote(code[2:])
 	} else if strings.HasPrefix(code, "p/") {
 		code, _ = nip19.EncodePublicKey(code[2:])
+	} else if strings.HasPrefix(code, "people/") {
+		code = code[7:]
 	}
 	if code == "" {
 		fmt.Fprintf(w, "call /<nip19 code>")
